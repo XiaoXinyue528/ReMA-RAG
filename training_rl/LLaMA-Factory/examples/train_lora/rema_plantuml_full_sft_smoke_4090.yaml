@@ -1,0 +1,45 @@
+### model
+model_name_or_path: /hy-tmp/cache/modelscope/LLM-Research/Meta-Llama-3-8B-Instruct
+quantization_bit: 4
+quantization_method: bitsandbytes
+upcast_layernorm: true
+
+### method
+stage: sft
+do_train: true
+finetuning_type: lora
+lora_target: all
+
+### dataset
+dataset: rema_plantuml_smoke_train
+eval_dataset: rema_plantuml_smoke_eval
+dataset_dir: data
+template: llama3
+cutoff_len: 3072
+overwrite_cache: true
+preprocessing_num_workers: 4
+
+### output
+output_dir: saves/llama3-8b/lora/rema_plantuml/full_sft_smoke
+logging_steps: 1
+save_steps: 10
+plot_loss: true
+overwrite_output_dir: true
+report_to: none
+
+### train
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 4
+learning_rate: 1.0e-4
+num_train_epochs: 1.0
+lr_scheduler_type: cosine
+warmup_ratio: 0.1
+bf16: true
+gradient_checkpointing: true
+seed: 42
+ddp_timeout: 180000000
+
+### eval
+per_device_eval_batch_size: 1
+eval_strategy: steps
+eval_steps: 5

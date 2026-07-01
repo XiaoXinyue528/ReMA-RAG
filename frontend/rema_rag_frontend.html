@@ -1,0 +1,1713 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ReMA-RAG PlantUML Generator</title>
+<style>
+  :root{
+    --bg:#f6f7fb;
+    --card:#ffffff;
+    --soft:#f9fafb;
+    --line:#e5e7eb;
+    --text:#111827;
+    --muted:#6b7280;
+    --blue:#2563eb;
+    --purple:#7c3aed;
+    --green:#16a34a;
+    --code:#0f172a;
+    --radius:18px;
+    --shadow:0 14px 40px rgba(15,23,42,.08);
+    --sidebar:300px;
+    --font:Inter,"Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+    --mono:Consolas,Menlo,Monaco,monospace;
+  }
+
+  *{box-sizing:border-box}
+
+  body{
+    margin:0;
+    height:100vh;
+    overflow:hidden;
+    font-family:var(--font);
+    color:var(--text);
+    background:
+      radial-gradient(circle at top left,rgba(37,99,235,.12),transparent 32%),
+      radial-gradient(circle at top right,rgba(124,58,237,.10),transparent 30%),
+      var(--bg);
+  }
+
+  button,input,textarea{font-family:inherit}
+
+  .app{
+    height:100vh;
+    display:grid;
+    grid-template-columns:var(--sidebar) 1fr;
+  }
+
+  .sidebar{
+    background:rgba(255,255,255,.88);
+    backdrop-filter:blur(16px);
+    border-right:1px solid var(--line);
+    padding:18px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    overflow:hidden;
+  }
+
+  .brand{
+    display:flex;
+    gap:12px;
+    align-items:center;
+    padding:4px 2px 10px;
+  }
+
+  .logo,.avatar.ai{
+    background:linear-gradient(135deg,var(--blue),var(--purple));
+    color:#fff;
+    display:grid;
+    place-items:center;
+    font-weight:900;
+    box-shadow:0 12px 28px rgba(37,99,235,.20);
+  }
+
+  .logo{
+    width:42px;
+    height:42px;
+    border-radius:14px;
+  }
+
+  .brand strong{
+    display:block;
+    font-size:16px;
+    line-height:1.15;
+  }
+
+  .brand span{
+    display:block;
+    margin-top:4px;
+    font-size:12px;
+    color:var(--muted);
+  }
+
+  .new-btn{
+    border:0;
+    border-radius:14px;
+    padding:12px 14px;
+    background:linear-gradient(135deg,var(--blue),var(--purple));
+    color:#fff;
+    font-weight:800;
+    cursor:pointer;
+  }
+
+  .side-search{
+    position:relative;
+  }
+
+  .side-search input{
+    width:100%;
+    border:1px solid var(--line);
+    border-radius:14px;
+    background:#f3f4f6;
+    padding:11px 12px 11px 38px;
+    outline:none;
+  }
+
+  .side-search b{
+    position:absolute;
+    left:13px;
+    top:9px;
+    color:var(--muted);
+  }
+
+  .side-title{
+    font-size:12px;
+    color:var(--muted);
+    font-weight:800;
+    letter-spacing:.08em;
+    margin:8px 4px 0;
+  }
+
+  .history{
+    overflow:auto;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    padding-right:3px;
+  }
+
+  .history button{
+    border:1px solid transparent;
+    border-radius:14px;
+    background:transparent;
+    padding:11px 12px;
+    text-align:left;
+    cursor:pointer;
+    color:var(--text);
+  }
+
+  .history button:hover,
+  .history button.active{
+    background:#f3f4f6;
+    border-color:var(--line);
+  }
+
+  .history strong{
+    display:block;
+    font-size:13px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    margin-bottom:4px;
+  }
+
+  .history span{
+    display:block;
+    color:var(--muted);
+    font-size:11px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .footer-note{
+    margin-top:auto;
+    border-top:1px solid var(--line);
+    padding-top:12px;
+    color:var(--muted);
+    font-size:12px;
+    line-height:1.6;
+  }
+
+  .main{
+    height:100vh;
+    display:grid;
+    grid-template-rows:auto 1fr auto;
+    overflow:hidden;
+  }
+
+  .topbar{
+    padding:16px 24px;
+    border-bottom:1px solid var(--line);
+    background:rgba(255,255,255,.78);
+    backdrop-filter:blur(16px);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:18px;
+  }
+
+  .topbar h1{
+    margin:0;
+    font-size:18px;
+  }
+
+  .topbar p{
+    margin:5px 0 0;
+    color:var(--muted);
+    font-size:13px;
+  }
+
+  .status-pills{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+    gap:8px;
+  }
+
+  .pill{
+    border:1px solid var(--line);
+    background:#fff;
+    border-radius:999px;
+    padding:7px 10px;
+    color:var(--muted);
+    font-size:12px;
+  }
+
+  .chat{
+    overflow:auto;
+    padding:28px;
+  }
+
+
+  .chat.home-mode{
+    display:grid;
+    place-items:center;
+    padding:28px;
+  }
+
+  .chat.home-mode .welcome{
+    width:min(960px,92%);
+    margin:0 auto;
+  }
+
+
+  .welcome{
+    max-width:960px;
+    margin:0 auto;
+    background:rgba(255,255,255,.82);
+    border:1px solid var(--line);
+    border-radius:28px;
+    padding:32px;
+    box-shadow:var(--shadow);
+  }
+
+  .welcome h2{
+    margin:0 0 10px;
+    font-size:28px;
+    letter-spacing:-.04em;
+  }
+
+  .welcome p{
+    margin:0;
+    color:var(--muted);
+    line-height:1.8;
+  }
+
+  .quick-list{
+    margin-top:22px;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px;
+  }
+
+  .quick-item{
+    border:1px solid var(--line);
+    border-radius:16px;
+    background:#fff;
+    padding:14px;
+  }
+
+  .quick-item strong{
+    display:block;
+    font-size:14px;
+    margin-bottom:6px;
+  }
+
+  .quick-item span{
+    display:block;
+    color:var(--muted);
+    font-size:12px;
+    line-height:1.55;
+  }
+
+  .msg{
+    max-width:1060px;
+    margin:0 auto 22px;
+    display:flex;
+    align-items:flex-start;
+    gap:14px;
+  }
+
+  .avatar{
+    width:34px;
+    height:34px;
+    border-radius:12px;
+    display:grid;
+    place-items:center;
+    flex:0 0 34px;
+    color:#fff;
+    font-size:13px;
+    font-weight:900;
+    background:#111827;
+    margin-top:3px;
+  }
+
+  .avatar.ai{
+    width:34px;
+    height:34px;
+    border-radius:12px;
+    box-shadow:0 8px 20px rgba(37,99,235,.18);
+  }
+
+  .bubble{
+    flex:1;
+    min-width:0;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:16px 18px;
+    line-height:1.7;
+    box-shadow:0 10px 26px rgba(15,23,42,.045);
+  }
+
+  .msg.user .bubble{
+    background:#111827;
+    color:#fff;
+    border-color:#111827;
+  }
+
+  .assistant-stream{
+    display:grid;
+    gap:14px;
+  }
+
+  .thinking-box{
+    border:1px solid var(--line);
+    background:#f9fafb;
+    border-radius:18px;
+    overflow:hidden;
+  }
+
+  .thinking-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    padding:11px 13px;
+    cursor:pointer;
+    user-select:none;
+    color:#374151;
+    font-size:13px;
+    font-weight:800;
+  }
+
+  .thinking-head span{
+    color:var(--muted);
+    font-weight:600;
+    font-size:12px;
+  }
+
+  .thinking-head .chev{
+    width:18px;
+    height:18px;
+    display:grid;
+    place-items:center;
+    transition:.18s;
+  }
+
+  .thinking-box.open .chev{
+    transform:rotate(90deg);
+  }
+
+  .thinking-body{
+    display:none;
+    border-top:1px solid var(--line);
+    padding:10px 13px 13px;
+    background:#fff;
+  }
+
+  .thinking-box.open .thinking-body{
+    display:block;
+  }
+
+  .trace-lines{
+    display:grid;
+    gap:8px;
+    font-family:var(--mono);
+    font-size:12.5px;
+    line-height:1.55;
+    color:#374151;
+  }
+
+  .trace-line{
+    border-left:3px solid #dbeafe;
+    padding:7px 9px;
+    background:#f8fafc;
+    border-radius:0 10px 10px 0;
+  }
+
+  .trace-line b{
+    color:#1d4ed8;
+  }
+
+  .cursor{
+    display:inline-block;
+    width:7px;
+    height:14px;
+    background:#2563eb;
+    vertical-align:-2px;
+    animation:blink 1s infinite;
+    margin-left:3px;
+  }
+
+  @keyframes blink{
+    0%,45%{opacity:1}
+    46%,100%{opacity:0}
+  }
+
+  .result-card{
+    display:grid;
+    gap:14px;
+  }
+
+  .result-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:14px;
+  }
+
+  .result-head h3{
+    margin:0;
+    font-size:18px;
+  }
+
+  .result-head p{
+    margin:5px 0 0;
+    color:var(--muted);
+    font-size:13px;
+  }
+
+  .actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+
+  .ghost{
+    border:1px solid var(--line);
+    border-radius:12px;
+    background:#fff;
+    padding:8px 10px;
+    font-size:12px;
+    font-weight:800;
+    cursor:pointer;
+    color:var(--text);
+  }
+
+  .ghost:hover{
+    border-color:rgba(37,99,235,.35);
+    color:var(--blue);
+  }
+
+  .code-card{
+    border-radius:18px;
+    overflow:hidden;
+    background:var(--code);
+  }
+
+  .code-title{
+    padding:10px 12px;
+    border-bottom:1px solid rgba(255,255,255,.08);
+    background:#111827;
+    color:#cbd5e1;
+    display:flex;
+    justify-content:space-between;
+    font-size:12px;
+  }
+
+  pre{
+    margin:0;
+    padding:16px;
+    overflow:auto;
+    color:#e5e7eb;
+    font-family:var(--mono);
+    font-size:13px;
+    line-height:1.55;
+    min-height:64px;
+  }
+
+  .diagram-card{
+    border:1px solid var(--line);
+    border-radius:18px;
+    background:#fff;
+    overflow:hidden;
+  }
+
+  .diagram-title{
+    padding:11px 14px;
+    border-bottom:1px solid var(--line);
+    background:#f9fafb;
+    display:flex;
+    justify-content:space-between;
+    color:var(--muted);
+    font-size:12px;
+  }
+
+  .diagram{
+    padding:18px;
+    overflow:auto;
+    background:#fff;
+    min-height:340px;
+  }
+
+  .rendering{
+    min-height:300px;
+    display:grid;
+    place-items:center;
+    color:var(--muted);
+    font-size:13px;
+  }
+
+  .spinner{
+    width:32px;
+    height:32px;
+    border-radius:50%;
+    border:3px solid #dbeafe;
+    border-top-color:#2563eb;
+    animation:spin .9s linear infinite;
+    margin:0 auto 12px;
+  }
+
+  @keyframes spin{
+    to{transform:rotate(360deg)}
+  }
+
+
+  .home-composer{
+    margin-top:26px;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:24px;
+    padding:12px;
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:12px;
+    align-items:end;
+    box-shadow:var(--shadow);
+  }
+
+  .home-composer textarea{
+    border:0;
+    outline:none;
+    resize:none;
+    width:100%;
+    min-height:54px;
+    max-height:160px;
+    padding:13px 14px;
+    background:transparent;
+    color:var(--text);
+    font-size:15px;
+    line-height:1.6;
+  }
+
+  .home-send{
+    border:0;
+    border-radius:16px;
+    padding:14px 20px;
+    background:linear-gradient(135deg,var(--blue),var(--purple));
+    color:#fff;
+    font-weight:900;
+    cursor:pointer;
+  }
+
+  .home-send:disabled{
+    opacity:.55;
+    cursor:not-allowed;
+  }
+
+  .home-hint{
+    margin-top:10px;
+    color:var(--muted);
+    font-size:12px;
+    padding-left:4px;
+  }
+
+
+  .composer{
+    border-top:1px solid var(--line);
+    background:rgba(255,255,255,.82);
+    backdrop-filter:blur(16px);
+    padding:16px 24px 22px;
+  }
+
+  .composer-inner{
+    max-width:1060px;
+    margin:0 auto;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:22px;
+    padding:12px;
+    box-shadow:var(--shadow);
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:12px;
+    align-items:end;
+  }
+
+  textarea{
+    border:0;
+    outline:none;
+    resize:none;
+    width:100%;
+    min-height:46px;
+    max-height:150px;
+    padding:12px;
+    background:transparent;
+    color:var(--text);
+    font-size:15px;
+    line-height:1.6;
+  }
+
+  .send{
+    border:0;
+    border-radius:16px;
+    padding:13px 18px;
+    background:linear-gradient(135deg,var(--blue),var(--purple));
+    color:#fff;
+    font-weight:900;
+    cursor:pointer;
+  }
+
+  .send:disabled{
+    opacity:.55;
+    cursor:not-allowed;
+  }
+
+  .hint{
+    max-width:1060px;
+    margin:8px auto 0;
+    color:var(--muted);
+    font-size:12px;
+    padding-left:4px;
+  }
+
+
+  .welcome p,
+  .home-hint{
+    display:none;
+  }
+
+  .thinking-dots{
+    display:inline-flex;
+    gap:3px;
+    align-items:center;
+    margin-left:6px;
+    vertical-align:middle;
+  }
+
+  .thinking-dots i{
+    width:4px;
+    height:4px;
+    border-radius:50%;
+    background:#6b7280;
+    display:block;
+    animation:dotJump 1.05s infinite ease-in-out;
+  }
+
+  .thinking-dots i:nth-child(2){animation-delay:.14s}
+  .thinking-dots i:nth-child(3){animation-delay:.28s}
+
+  @keyframes dotJump{
+    0%,80%,100%{transform:translateY(0);opacity:.35}
+    40%{transform:translateY(-5px);opacity:1}
+  }
+
+  .chat-composer{
+    border-top:1px solid var(--line);
+    background:rgba(255,255,255,.86);
+    backdrop-filter:blur(16px);
+    padding:16px 24px 22px;
+  }
+
+  .chat-composer.hidden{
+    display:none;
+  }
+
+  .chat-composer-inner{
+    max-width:1060px;
+    margin:0 auto;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:22px;
+    padding:12px;
+    box-shadow:var(--shadow);
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:12px;
+    align-items:end;
+  }
+
+  .chat-composer textarea{
+    border:0;
+    outline:none;
+    resize:none;
+    width:100%;
+    min-height:46px;
+    max-height:150px;
+    padding:12px;
+    background:transparent;
+    color:var(--text);
+    font-size:15px;
+    line-height:1.6;
+  }
+
+  .chat-send{
+    border:0;
+    border-radius:16px;
+    padding:13px 18px;
+    background:linear-gradient(135deg,var(--blue),var(--purple));
+    color:#fff;
+    font-weight:900;
+    cursor:pointer;
+  }
+
+  .chat-send:disabled{
+    opacity:.55;
+    cursor:not-allowed;
+  }
+
+
+  .toast{
+    position:fixed;
+    right:24px;
+    bottom:92px;
+    background:#111827;
+    color:#fff;
+    padding:11px 14px;
+    border-radius:14px;
+    opacity:0;
+    pointer-events:none;
+    transform:translateY(10px);
+    transition:.2s;
+    box-shadow:var(--shadow);
+    font-size:13px;
+  }
+
+  .toast.show{
+    opacity:1;
+    transform:translateY(0);
+  }
+
+  @media(max-width:900px){
+    .app{grid-template-columns:1fr}
+    .sidebar{display:none}
+    .topbar{align-items:flex-start;flex-direction:column}
+    .quick-list{grid-template-columns:1fr}
+  }
+</style>
+</head>
+
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">R</div>
+      <div>
+        <strong>ReMA-RAG</strong>
+        <span>PlantUML Generation System</span>
+      </div>
+    </div>
+
+    <button class="new-btn" id="newBtn">＋ 新建任务</button>
+
+    <div class="side-search">
+      <b>⌕</b>
+      <input id="historySearch" placeholder="搜索历史任务" />
+    </div>
+
+    <div class="side-title">历史任务</div>
+    <div class="history" id="history"></div>
+
+    <div class="footer-note">
+      支持需求解析、样例检索、PlantUML 代码输出与 UML 类图可视化。
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1>面向 PlantUML 的多智能体检索增强生成系统</h1>
+        <p>输入自然语言需求，系统将生成 PlantUML 类图代码并完成可视化渲染。</p>
+      </div>
+      <div class="status-pills">
+        <span class="pill">Planner</span>
+        <span class="pill">Step Definer</span>
+        <span class="pill">Retriever</span>
+        <span class="pill">Extractor</span>
+        <span class="pill">Coder</span>
+      </div>
+    </header>
+
+    <section class="chat" id="chat"></section>
+
+    <footer class="chat-composer hidden" id="bottomComposer">
+      <div class="chat-composer-inner">
+        <textarea id="bottomQueryInput" placeholder="继续输入需求，生成新的 PlantUML 类图"></textarea>
+        <button class="chat-send" id="bottomSendBtn">生成</button>
+      </div>
+    </footer>
+  </main>
+</div>
+
+<div class="toast" id="toast">已复制</div>
+
+<script>
+const chat = document.getElementById("chat");
+let queryInput = null;
+let sendBtn = null;
+const historyBox = document.getElementById("history");
+const historySearch = document.getElementById("historySearch");
+const newBtn = document.getElementById("newBtn");
+const toast = document.getElementById("toast");
+const bottomComposer = document.getElementById("bottomComposer");
+
+const params = new URLSearchParams(location.search);
+const API_BASE_URL = (params.get("api") || localStorage.getItem("remarag_api_base") || "http://127.0.0.1:8000").replace(/\/+$/,"");
+const API_MODEL = params.get("model") || localStorage.getItem("remarag_api_model") || "gpt-3.5-turbo";
+const API_KEY = params.get("key") || localStorage.getItem("remarag_api_key") || "";
+
+let activeId = null;
+let historyData = JSON.parse(localStorage.getItem("remarag_real_history_v1") || "[]");
+
+function bindComposer(inputEl, sendEl){
+  if(!inputEl || !sendEl || sendEl.dataset.bound === "1") return;
+  sendEl.dataset.bound = "1";
+
+  sendEl.addEventListener("click",()=>{
+    const text = inputEl.value;
+    inputEl.value = "";
+    inputEl.style.height = "auto";
+    runQuery(text);
+  });
+
+  inputEl.addEventListener("keydown",e=>{
+    if(e.key === "Enter" && !e.shiftKey){
+      e.preventDefault();
+      sendEl.click();
+    }
+  });
+
+  inputEl.addEventListener("input",()=>{
+    inputEl.style.height = "auto";
+    inputEl.style.height = Math.min(inputEl.scrollHeight,160) + "px";
+  });
+}
+
+function bindHomeComposer(){
+  queryInput = document.getElementById("homeQueryInput");
+  sendBtn = document.getElementById("homeSendBtn");
+  bindComposer(queryInput, sendBtn);
+}
+
+function showBottomComposer(){
+  if(!bottomComposer) return;
+  bottomComposer.classList.remove("hidden");
+  queryInput = document.getElementById("bottomQueryInput");
+  sendBtn = document.getElementById("bottomSendBtn");
+  bindComposer(queryInput, sendBtn);
+}
+
+function hideBottomComposer(){
+  if(bottomComposer) bottomComposer.classList.add("hidden");
+  queryInput = null;
+  sendBtn = null;
+}
+
+function saveHistory(){
+  localStorage.setItem("remarag_real_history_v1", JSON.stringify(historyData.slice(0,40)));
+}
+
+function esc(s){
+  return String(s ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+function norm(s){
+  return String(s || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\u4e00-\u9fa5]+/g," ")
+    .trim();
+}
+
+function makeTitle(query){
+  const cleaned = String(query || "").replace(/\s+/g," ").trim();
+  if(!cleaned) return "PlantUML 类图生成";
+  return cleaned.length > 22 ? cleaned.slice(0,22) + "..." : cleaned;
+}
+
+function renderWelcome(){
+  activeId = null;
+  hideBottomComposer();
+  chat.classList.add("home-mode");
+  chat.innerHTML = `
+    <div class="welcome">
+      <h2>需要生成什么类图？</h2>
+      <div class="home-composer">
+        <textarea id="homeQueryInput" placeholder="输入软件需求描述，生成 PlantUML 类图"></textarea>
+        <button class="home-send" id="homeSendBtn">生成</button>
+      </div>
+    </div>
+  `;
+  bindHomeComposer();
+  renderHistory();
+}
+
+function renderHistory(filter=""){
+  const q = norm(filter);
+  const list = historyData.filter(h => !q || norm((h.title || "") + " " + h.query).includes(q));
+
+  historyBox.innerHTML = list.map(h => `
+      <button class="${h.id === activeId ? "active" : ""}" data-record="${h.id}">
+        <strong>${esc(h.title || "PlantUML 类图生成")}</strong>
+        <span>${esc(h.query || "")}</span>
+      </button>
+    `).join("") || `<div style="color:#6b7280;font-size:13px;padding:14px;">没有历史任务</div>`;
+}
+
+function userMessage(text){
+  chat.insertAdjacentHTML("beforeend", `
+    <div class="msg user">
+      <div class="avatar">我</div>
+      <div class="bubble">${esc(text)}</div>
+    </div>
+  `);
+}
+
+function createAssistantShell(openThinking=false){
+  const id = "run-" + Date.now() + "-" + Math.random().toString(16).slice(2);
+  chat.insertAdjacentHTML("beforeend", `
+    <div class="msg">
+      <div class="avatar ai">R</div>
+      <div class="bubble">
+        <div class="assistant-stream" id="${id}">
+          <div class="thinking-box ${openThinking ? "open" : ""}" data-thinking>
+            <div class="thinking-head" data-toggle-thinking>
+              <div>Thinking <span data-thinking-status><span class="thinking-dots"><i></i><i></i><i></i></span></span></div>
+              <div class="chev">›</div>
+            </div>
+            <div class="thinking-body">
+              <div class="trace-lines" data-trace></div>
+            </div>
+          </div>
+          <div class="result-card" data-result></div>
+        </div>
+      </div>
+    </div>
+  `);
+  scrollBottom();
+  return id;
+}
+
+function addTrace(runId, role, text){
+  const trace = document.querySelector(`#${runId} [data-trace]`);
+  const status = document.querySelector(`#${runId} [data-thinking-status]`);
+  if(!trace) return;
+  trace.insertAdjacentHTML("beforeend", `<div class="trace-line"><b>${esc(role)}</b> — ${esc(text)}</div>`);
+  if(status) status.textContent = role;
+  scrollBottom();
+}
+
+function finishThinking(runId){
+  const status = document.querySelector(`#${runId} [data-thinking-status]`);
+  if(status) status.textContent = "Completed";
+}
+
+function resultBox(runId){
+  return document.querySelector(`#${runId} [data-result]`);
+}
+
+function renderHeader(runId,item){
+  resultBox(runId).insertAdjacentHTML("beforeend", `
+    <div class="result-head">
+      <div>
+        <h3>${esc(item.title || "PlantUML 类图生成结果")}</h3>
+        <p>${esc(item.subtitle || "已完成 PlantUML 代码生成与 UML 类图渲染。")}</p>
+      </div>
+      <div class="actions">
+        <button class="ghost" data-copy="code-${runId}">复制代码</button>
+      </div>
+    </div>
+  `);
+}
+
+function renderCodeCard(runId, initial=""){
+  resultBox(runId).insertAdjacentHTML("beforeend", `
+    <div class="code-card">
+      <div class="code-title">
+        <span>PlantUML Source</span>
+        <span>generated_class_diagram.puml</span>
+      </div>
+      <pre><code id="code-${runId}">${esc(initial)}</code><span class="cursor" data-code-cursor></span></pre>
+    </div>
+  `);
+}
+
+function renderDiagramPlaceholder(runId){
+  resultBox(runId).insertAdjacentHTML("beforeend", `
+    <div class="diagram-card">
+      <div class="diagram-title">
+        <span>UML 类图渲染结果</span>
+        <span>PlantUML View</span>
+      </div>
+      <div class="diagram" id="diagram-${runId}">
+        <div class="rendering">
+          <div>
+            <div class="spinner"></div>
+            <div>Rendering PlantUML diagram...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `);
+}
+
+function renderError(runId, message){
+  resultBox(runId).innerHTML = `
+    <div class="result-head">
+      <div>
+        <h3>生成失败</h3>
+        <p>${esc(message || "生成服务暂时没有返回有效结果。请确认服务已经启动。")}</p>
+      </div>
+    </div>
+  `;
+}
+
+function wait(ms){
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function typeCode(runId, code){
+  renderCodeCard(runId,"");
+  const codeEl = document.getElementById("code-" + runId);
+  const cursor = document.querySelector(`#${runId} [data-code-cursor]`);
+  let out = "";
+  const chunk = Math.max(1, Math.ceil(code.length / 135));
+
+  for(let i=0;i<code.length;i+=chunk){
+    out += code.slice(i,i+chunk);
+    codeEl.textContent = out;
+    scrollBottom();
+    await wait(18 + Math.random()*18);
+  }
+
+  if(cursor) cursor.remove();
+}
+
+function buildModelPrompt(requirement){
+  return "Combine all step snippets into final PlantUML for requirement:\n" + requirement.trim();
+}
+
+async function callModel(requirement){
+  const headers = {"Content-Type":"application/json"};
+  if(API_KEY) headers["Authorization"] = "Bearer " + API_KEY;
+
+  const payload = {
+    model: API_MODEL,
+    messages: [
+      {
+        role: "user",
+        content: buildModelPrompt(requirement)
+      }
+    ],
+    temperature: 0.2,
+    top_p: 0.9,
+    max_tokens: 768,
+    stream: false
+  };
+
+  const response = await fetch(API_BASE_URL + "/v1/chat/completions", {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload)
+  });
+
+  if(!response.ok){
+    let detail = "";
+    try{
+      detail = await response.text();
+    }catch(_){}
+    throw new Error(`API ${response.status}: ${detail || response.statusText}`);
+  }
+
+  const data = await response.json();
+  const content = data?.choices?.[0]?.message?.content;
+  if(!content){
+    throw new Error("API returned an empty message.");
+  }
+  return content;
+}
+
+function extractPlantUML(text){
+  const value = String(text || "").trim();
+  const block = value.match(/@startuml[\s\S]*?@enduml/i);
+  if(block) return block[0].trim();
+
+  const fence = value.match(/```(?:plantuml|puml)?\s*([\s\S]*?)```/i);
+  const candidate = (fence ? fence[1] : value).trim();
+  if(!candidate) return "";
+
+  if(/@startuml/i.test(candidate)) return candidate;
+  if(/\b(class|interface|enum)\s+[A-Za-z_][A-Za-z0-9_]*|[A-Za-z_][A-Za-z0-9_]*\s*(?:"[^"]*"\s*)?[.\-|<>o*]+\s*(?:"[^"]*"\s*)?[A-Za-z_][A-Za-z0-9_]*/.test(candidate)){
+    return "@startuml\n" + candidate + "\n@enduml";
+  }
+  return candidate;
+}
+
+async function runQuery(text, addToHistory=true){
+  const query = String(text || "").trim();
+  if(!query) return;
+
+  chat.classList.remove("home-mode");
+  chat.querySelector(".welcome")?.remove();
+  showBottomComposer();
+  if(sendBtn) sendBtn.disabled = true;
+  if(queryInput) queryInput.disabled = true;
+
+  userMessage(query);
+
+  const runId = createAssistantShell(false);
+  const title = makeTitle(query);
+  const startTime = Date.now();
+
+  try{
+    addTrace(runId,"Input","Requirement received. Preparing the PlantUML generation request.");
+    await wait(350);
+    addTrace(runId,"Prompt Builder","Use the trained ReMA-RAG Coder prompt format for final PlantUML synthesis.");
+    await wait(350);
+    addTrace(runId,"Inference Service","Send the requirement to the PlantUML generation service.");
+    const raw = await callModel(query);
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    addTrace(runId,"Coder Model",`Model response received in ${elapsed}s.`);
+    await wait(250);
+
+    const code = extractPlantUML(raw);
+    if(!code){
+      throw new Error("Model output does not contain valid PlantUML content.");
+    }
+
+    addTrace(runId,"Parser","Extract PlantUML source from the model response.");
+    await wait(250);
+    finishThinking(runId);
+
+    const item = {
+      title,
+      subtitle:"已完成 PlantUML 代码生成与 UML 类图渲染。",
+      code
+    };
+    renderHeader(runId,item);
+    await typeCode(runId,code);
+
+    await wait(350);
+    addTrace(runId,"Renderer","Render the PlantUML class structure in the front-end view.");
+    renderDiagramPlaceholder(runId);
+    await wait(500);
+    renderPlantUML(code, document.getElementById("diagram-" + runId));
+
+    if(addToHistory){
+      const record = {
+        id:"record-" + Date.now(),
+        title,
+        query,
+        code,
+        raw,
+        time:new Date().toLocaleString()
+      };
+      historyData.unshift(record);
+      activeId = record.id;
+      saveHistory();
+      renderHistory(historySearch.value);
+    }
+  }catch(err){
+    addTrace(runId,"Error",err?.message || String(err));
+    finishThinking(runId);
+    renderError(runId, err?.message || String(err));
+  }finally{
+    if(sendBtn) sendBtn.disabled = false;
+    if(queryInput){
+      queryInput.disabled = false;
+      queryInput.focus();
+    }
+  }
+}
+
+function renderRecordInstant(record){
+  activeId = record.id;
+  renderHistory(historySearch.value);
+  chat.classList.remove("home-mode");
+  chat.innerHTML = "";
+  showBottomComposer();
+  userMessage(record.query);
+
+  const runId = createAssistantShell(false);
+  addTrace(runId,"History","Loaded a saved generation record.");
+  addTrace(runId,"PlantUML Source","Restored the previously generated PlantUML code.");
+  finishThinking(runId);
+
+  if(!record.code){
+    renderError(runId,"这条历史记录没有保存 PlantUML 代码。");
+    return;
+  }
+
+  renderHeader(runId,{
+    title:record.title || makeTitle(record.query),
+    subtitle:"已从历史任务恢复 PlantUML 代码与类图渲染结果。",
+    code:record.code
+  });
+  renderCodeCard(runId,record.code);
+  const cursor = document.querySelector(`#${runId} [data-code-cursor]`);
+  if(cursor) cursor.remove();
+  renderDiagramPlaceholder(runId);
+  renderPlantUML(record.code, document.getElementById("diagram-" + runId));
+}
+
+function parsePlantUML(code){
+  const classes = [];
+  const relations = [];
+  const classRegex = /class\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s+extends\s+([A-Za-z_][A-Za-z0-9_]*))?\s*\{([\s\S]*?)\}/g;
+  let m;
+
+  while((m = classRegex.exec(code))){
+    const name = m[1];
+    const parent = m[2];
+    const body = m[3].split("\n").map(x => x.trim()).filter(Boolean);
+    classes.push({name, body});
+    if(parent){
+      relations.push({from:name, to:parent, label:"", kind:"inherit", m1:"", m2:""});
+    }
+  }
+
+  const lines = code.split("\n").map(x => x.trim()).filter(Boolean);
+
+  for(const line of lines){
+    if(line.startsWith("@") || line.startsWith("class ") || line === "}") continue;
+
+    const r = line.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*(?:"([^"]*)"\s*)?([.\-|<>o*]+)\s*(?:"([^"]*)"\s*)?([A-Za-z_][A-Za-z0-9_]*)(?:\s*:\s*(.+))?$/);
+    if(r){
+      relations.push({
+        from:r[1],
+        m1:r[2] || "",
+        arrow:r[3],
+        m2:r[4] || "",
+        to:r[5],
+        label:r[6] || "",
+        kind:r[3].includes("|>") ? "inherit" : "assoc"
+      });
+    }
+  }
+
+  const defined = new Set(classes.map(c => c.name));
+  for(const rel of relations){
+    if(rel.from && !defined.has(rel.from)){
+      classes.push({name: rel.from, body: []});
+      defined.add(rel.from);
+    }
+    if(rel.to && !defined.has(rel.to)){
+      classes.push({name: rel.to, body: []});
+      defined.add(rel.to);
+    }
+  }
+
+  return {classes, relations};
+}
+
+function formatMember(line){
+  let s = String(line).replace(/^[-+#~]\s*/,"").trim();
+
+  let attr = s.match(/^([A-Za-z0-9_<>,]+)\s+([A-Za-z_][A-Za-z0-9_]*)$/);
+  if(attr){
+    return `${attr[2]}: ${attr[1]}`;
+  }
+
+  let method = s.match(/^([A-Za-z0-9_<>,]+)\s+([A-Za-z_][A-Za-z0-9_]*)\((.*)\)$/);
+  if(method){
+    return `${method[2]}(${method[3]}): ${method[1]}`;
+  }
+
+  return s;
+}
+
+function getBoxSize(cls){
+  const rows = cls.body.map(formatMember).slice(0,6);
+  const maxTextLen = Math.max(cls.name.length + 4, ...rows.map(x => x.length), 12);
+  const w = Math.min(330, Math.max(235, maxTextLen * 7.2 + 74));
+  const h = Math.max(92, 48 + rows.length * 22);
+  return {w,h,rows};
+}
+
+function buildLayoutEdges(parsed){
+  const edges = [];
+  parsed.relations.forEach(r=>{
+    if(r.kind === "inherit"){
+      edges.push({from:r.to, to:r.from});
+    }else{
+      edges.push({from:r.from, to:r.to});
+    }
+  });
+  return edges;
+}
+
+function layoutClasses(parsed){
+  const classes = parsed.classes;
+  const names = classes.map(c => c.name);
+  const sizes = new Map(classes.map(c => [c.name, getBoxSize(c)]));
+  const edges = buildLayoutEdges(parsed);
+
+  const out = new Map(names.map(n=>[n,0]));
+  const inc = new Map(names.map(n=>[n,0]));
+  edges.forEach(e=>{
+    if(out.has(e.from)) out.set(e.from,out.get(e.from)+1);
+    if(inc.has(e.to)) inc.set(e.to,inc.get(e.to)+1);
+  });
+
+  let root = names.slice().sort((a,b)=>{
+    const az = inc.get(a) === 0 ? 1 : 0;
+    const bz = inc.get(b) === 0 ? 1 : 0;
+    return (bz-az) || (out.get(b)-out.get(a)) || names.indexOf(a)-names.indexOf(b);
+  })[0] || names[0];
+
+  const layer = new Map();
+  const queue = [];
+  if(root){
+    layer.set(root,0);
+    queue.push(root);
+  }
+
+  while(queue.length){
+    const cur = queue.shift();
+    const nextLayer = layer.get(cur) + 1;
+    edges.filter(e=>e.from === cur).forEach(e=>{
+      if(!layer.has(e.to) || layer.get(e.to) < nextLayer){
+        layer.set(e.to,nextLayer);
+        queue.push(e.to);
+      }
+    });
+  }
+
+  let maxLayer = Math.max(0, ...Array.from(layer.values()));
+  names.forEach(n=>{
+    if(!layer.has(n)){
+      maxLayer += 1;
+      layer.set(n,maxLayer);
+    }
+  });
+
+  const layers = [];
+  names.forEach(n=>{
+    const l = layer.get(n);
+    if(!layers[l]) layers[l] = [];
+    layers[l].push(n);
+  });
+
+  layers.forEach(arr=>{
+    arr.sort((a,b)=>{
+      const ao = out.get(a), bo = out.get(b);
+      const ai = inc.get(a), bi = inc.get(b);
+      return (bo+bi)-(ao+ai) || names.indexOf(a)-names.indexOf(b);
+    });
+  });
+
+  const xGap = 135;
+  const yGap = 175;
+  const marginX = 95;
+  const marginY = 55;
+  let width = 980;
+  let height = marginY;
+
+  layers.forEach(arr=>{
+    if(!arr || !arr.length) return;
+    const rowW = arr.reduce((sum,n)=>sum+sizes.get(n).w,0) + (arr.length-1)*xGap + marginX*2;
+    width = Math.max(width,rowW);
+  });
+
+  const map = new Map();
+  let y = marginY;
+  layers.forEach(arr=>{
+    if(!arr || !arr.length) return;
+    const rowH = Math.max(...arr.map(n=>sizes.get(n).h));
+    const rowW = arr.reduce((sum,n)=>sum+sizes.get(n).w,0) + (arr.length-1)*xGap;
+    let x = (width - rowW) / 2;
+    arr.forEach(n=>{
+      const s = sizes.get(n);
+      map.set(n,{x,y,w:s.w,h:s.h,rows:s.rows});
+      x += s.w + xGap;
+    });
+    y += rowH + yGap;
+    height = y;
+  });
+
+  height = Math.max(360, height - yGap + marginY);
+  return {map,width,height};
+}
+
+function relationEndpoints(a,b){
+  const acx = a.x + a.w/2, acy = a.y + a.h/2;
+  const bcx = b.x + b.w/2, bcy = b.y + b.h/2;
+  const dx = bcx - acx, dy = bcy - acy;
+
+  if(Math.abs(dx) > Math.abs(dy) * 1.25){
+    if(dx > 0) return {sx:a.x+a.w, sy:acy, ex:b.x, ey:bcy, orient:"h", dir:1};
+    return {sx:a.x, sy:acy, ex:b.x+b.w, ey:bcy, orient:"h", dir:-1};
+  }
+
+  if(dy >= 0) return {sx:acx, sy:a.y+a.h, ex:bcx, ey:b.y, orient:"v", dir:1};
+  return {sx:acx, sy:a.y, ex:bcx, ey:b.y+b.h, orient:"v", dir:-1};
+}
+
+function makeOrthogonalPath(ep){
+  if(ep.orient === "h"){
+    const midX = (ep.sx + ep.ex) / 2;
+    return [
+      {x:ep.sx,y:ep.sy},
+      {x:midX,y:ep.sy},
+      {x:midX,y:ep.ey},
+      {x:ep.ex,y:ep.ey}
+    ];
+  }
+  const midY = (ep.sy + ep.ey) / 2;
+  return [
+    {x:ep.sx,y:ep.sy},
+    {x:ep.sx,y:midY},
+    {x:ep.ex,y:midY},
+    {x:ep.ex,y:ep.ey}
+  ];
+}
+
+function pathToD(points){
+  return points.map((p,i)=>`${i ? "L" : "M"} ${p.x} ${p.y}`).join(" ");
+}
+
+function rectsOverlap(a,b){
+  return !(a.x+a.w < b.x || b.x+b.w < a.x || a.y+a.h < b.y || b.y+b.h < a.y);
+}
+
+function paddedBoxes(boxes,pad=12){
+  return boxes.map(b=>({x:b.x-pad,y:b.y-pad,w:b.w+pad*2,h:b.h+pad*2}));
+}
+
+function textRect(x,y,text,anchor="middle"){
+  const w = Math.max(32, String(text).length * 7.3 + 12);
+  const h = 20;
+  let left = x - w/2;
+  if(anchor === "start") left = x;
+  if(anchor === "end") left = x - w;
+  return {x:left,y:y-15,w,h};
+}
+
+function anyCollision(rect,boxes){
+  return boxes.some(b=>rectsOverlap(rect,b));
+}
+
+function chooseLabelPoint(points,text,boxes,labelBoxes,index){
+  const obstacleBoxes = paddedBoxes(boxes,8).concat(labelBoxes);
+  const segments = [];
+
+  for(let i=0;i<points.length-1;i++){
+    const a = points[i], b = points[i+1];
+    const len = Math.abs(b.x-a.x) + Math.abs(b.y-a.y);
+    if(len < 26) continue;
+    segments.push({
+      a,b,len,
+      vertical:Math.abs(b.y-a.y) > Math.abs(b.x-a.x)
+    });
+  }
+
+  segments.sort((s1,s2)=>s2.len-s1.len);
+
+  const candidates = [];
+  segments.forEach(seg=>{
+    const ts = [0.5,0.36,0.64,0.23,0.77];
+    ts.forEach(t=>{
+      const bx = seg.a.x + (seg.b.x-seg.a.x)*t;
+      const by = seg.a.y + (seg.b.y-seg.a.y)*t;
+      if(seg.vertical){
+        [10,-10,18,-18,26,-26].forEach(dx=>{
+          candidates.push({x:bx+dx,y:by+5,anchor:dx > 0 ? "start" : "end"});
+        });
+      }else{
+        [-5,14,-16,24].forEach(dy=>{
+          candidates.push({x:bx,y:by+dy,anchor:"middle"});
+        });
+      }
+    });
+  });
+
+  if(!candidates.length){
+    const p = points[Math.floor(points.length/2)] || points[0];
+    candidates.push({x:p.x+24,y:p.y-12,anchor:"middle"});
+  }
+
+  for(const c of candidates){
+    const r = textRect(c.x,c.y,text,c.anchor);
+    if(!anyCollision(r,obstacleBoxes)){
+      labelBoxes.push({x:r.x-4,y:r.y-3,w:r.w+8,h:r.h+6});
+      return c;
+    }
+  }
+
+  const fallback = candidates[index % candidates.length];
+  const r = textRect(fallback.x,fallback.y,text,fallback.anchor);
+  labelBoxes.push({x:r.x-4,y:r.y-3,w:r.w+8,h:r.h+6});
+  return fallback;
+}
+
+function chooseMultiplicityPoint(point,nextPoint,text,boxes,labelBoxes){
+  const obstacleBoxes = paddedBoxes(boxes,7).concat(labelBoxes);
+  const dx = nextPoint.x - point.x;
+  const dy = nextPoint.y - point.y;
+  const vertical = Math.abs(dy) >= Math.abs(dx);
+
+  let candidates = [];
+  if(vertical){
+    const down = dy > 0;
+    candidates = [
+      {x:point.x + 10, y:point.y + (down ? 18 : -6), anchor:"start"},
+      {x:point.x - 10, y:point.y + (down ? 18 : -6), anchor:"end"},
+      {x:point.x + 18, y:point.y + (down ? 28 : -16), anchor:"start"},
+      {x:point.x - 18, y:point.y + (down ? 28 : -16), anchor:"end"}
+    ];
+  }else{
+    const right = dx > 0;
+    candidates = [
+      {x:point.x + (right ? 10 : -10), y:point.y - 6, anchor:right ? "start" : "end"},
+      {x:point.x + (right ? 10 : -10), y:point.y + 16, anchor:right ? "start" : "end"},
+      {x:point.x + (right ? 18 : -18), y:point.y - 16, anchor:right ? "start" : "end"},
+      {x:point.x + (right ? 18 : -18), y:point.y + 26, anchor:right ? "start" : "end"}
+    ];
+  }
+
+  for(const c of candidates){
+    const r = textRect(c.x,c.y,text,c.anchor);
+    if(!anyCollision(r,obstacleBoxes)){
+      labelBoxes.push({x:r.x-3,y:r.y-2,w:r.w+6,h:r.h+4});
+      return c;
+    }
+  }
+
+  const fallback = candidates[0];
+  const r = textRect(fallback.x,fallback.y,text,fallback.anchor);
+  labelBoxes.push({x:r.x-3,y:r.y-2,w:r.w+6,h:r.h+4});
+  return fallback;
+}
+
+function relationText(text,x,y,anchor="middle"){
+  if(!text) return "";
+  return `<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="12.5" fill="#111827" stroke="#fff" stroke-width="3.5" paint-order="stroke" stroke-linejoin="round">${esc(text)}</text>`;
+}
+
+function multiplicityText(text,x,y,anchor="middle"){
+  if(!text) return "";
+  return `<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="12" fill="#111827" stroke="#fff" stroke-width="3.2" paint-order="stroke" stroke-linejoin="round">${esc(text)}</text>`;
+}
+
+function renderPlantUML(code, mount){
+  const parsed = parsePlantUML(code);
+  if(!parsed.classes.length){
+    mount.innerHTML = `<div style="color:#6b7280;padding:20px;">未解析到可视化类结构</div>`;
+    return;
+  }
+
+  const {map,width,height} = layoutClasses(parsed);
+  const boxes = Array.from(map.values());
+  const markerSuffix = mount.id.replace(/[^A-Za-z0-9_]/g,"_");
+
+  let paths = "";
+  let labels = "";
+  const labelBoxes = [];
+
+  parsed.relations.forEach((r,idx)=>{
+    const a = map.get(r.from);
+    const b = map.get(r.to);
+    if(!a || !b) return;
+
+    const ep = relationEndpoints(a,b);
+    const points = makeOrthogonalPath(ep);
+    const marker = r.kind === "inherit" ? `url(#inherit-${markerSuffix})` : (r.arrow && r.arrow.includes(">") ? `url(#arrow-${markerSuffix})` : "");
+
+    paths += `<path d="${pathToD(points)}" fill="none" stroke="#64748b" stroke-width="1.35" marker-end="${marker}"></path>`;
+
+    if(r.label){
+      const lp = chooseLabelPoint(points,r.label.slice(0,18),boxes,labelBoxes,idx);
+      labels += relationText(r.label.slice(0,18),lp.x,lp.y,lp.anchor || "middle");
+    }
+
+    if(r.m1){
+      const p0 = points[0], p1 = points[1];
+      const mp = chooseMultiplicityPoint(p0,p1,r.m1,boxes,labelBoxes);
+      labels += multiplicityText(r.m1,mp.x,mp.y,mp.anchor || "middle");
+    }
+
+    if(r.m2){
+      const pn = points[points.length-1], pp = points[points.length-2];
+      const mp = chooseMultiplicityPoint(pn,pp,r.m2,boxes,labelBoxes);
+      labels += multiplicityText(r.m2,mp.x,mp.y,mp.anchor || "middle");
+    }
+  });
+
+  let nodes = "";
+  parsed.classes.forEach(cls=>{
+    const p = map.get(cls.name);
+    if(!p) return;
+    const rows = p.rows || cls.body.map(formatMember).slice(0,6);
+    const boxH = p.h;
+
+    nodes += `
+      <g>
+        <rect x="${p.x}" y="${p.y}" width="${p.w}" height="${boxH}" rx="2" fill="#fff" stroke="#2f5597" stroke-width="1.35"></rect>
+        <line x1="${p.x}" y1="${p.y + 38}" x2="${p.x + p.w}" y2="${p.y + 38}" stroke="#2f5597" stroke-width="1.05"></line>
+        <circle cx="${p.x + 20}" cy="${p.y + 20}" r="9" fill="#eef2ff" stroke="#2f5597" stroke-width="1"></circle>
+        <text x="${p.x + 20}" y="${p.y + 24}" text-anchor="middle" font-size="11" font-weight="700" fill="#2f5597">C</text>
+        <text x="${p.x + 38}" y="${p.y + 25}" font-size="15" font-weight="700" fill="#111827">${esc(cls.name)}</text>
+    `;
+
+    rows.forEach((row,i)=>{
+      const y = p.y + 62 + i * 22;
+      nodes += `
+        <circle cx="${p.x + 20}" cy="${y - 4}" r="4" fill="#fff" stroke="#64748b" stroke-width="1"></circle>
+        <text x="${p.x + 32}" y="${y}" font-size="12.5" fill="#111827">${esc(row)}</text>
+      `;
+    });
+
+    nodes += `</g>`;
+  });
+
+  const svg = `
+  <svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow-${markerSuffix}" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+        <path d="M0,0 L8,3 L0,6 Z" fill="#475569"></path>
+      </marker>
+      <marker id="inherit-${markerSuffix}" markerWidth="13" markerHeight="11" refX="11" refY="5.5" orient="auto">
+        <path d="M1,1 L11,5.5 L1,10 Z" fill="white" stroke="#475569" stroke-width="1.4"></path>
+      </marker>
+    </defs>
+    ${paths}
+    ${nodes}
+    ${labels}
+  </svg>`;
+
+  mount.innerHTML = svg;
+}
+
+function scrollBottom(){
+  chat.scrollTo({top:chat.scrollHeight,behavior:"smooth"});
+}
+
+function showToast(text){
+  toast.textContent = text;
+  toast.classList.add("show");
+  setTimeout(()=>toast.classList.remove("show"),1300);
+}
+
+historyBox.addEventListener("click",e=>{
+  const btn = e.target.closest("[data-record]");
+  if(!btn) return;
+
+  const record = historyData.find(h => h.id === btn.dataset.record);
+  if(!record) return;
+
+  renderRecordInstant(record);
+});
+
+historySearch.addEventListener("input",()=>{
+  renderHistory(historySearch.value);
+});
+
+newBtn.addEventListener("click",()=>{
+  renderWelcome();
+});
+
+chat.addEventListener("click",e=>{
+  const copy = e.target.closest("[data-copy]");
+  if(copy){
+    const code = document.getElementById(copy.dataset.copy)?.textContent || "";
+    navigator.clipboard.writeText(code).then(()=>showToast("PlantUML 代码已复制"));
+  }
+
+  const toggle = e.target.closest("[data-toggle-thinking]");
+  if(toggle){
+    const box = toggle.closest("[data-thinking]");
+    if(box) box.classList.toggle("open");
+  }
+});
+
+renderWelcome();
+</script>
+</body>
+</html>

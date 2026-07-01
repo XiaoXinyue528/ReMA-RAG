@@ -1,0 +1,50 @@
+### model
+model_name_or_path: /hy-tmp/cache/modelscope/LLM-Research/Meta-Llama-3-8B-Instruct
+adapter_name_or_path: /hy-tmp/rema_mappo_v0_tiny_20260615/adapters/full_sft_v4
+quantization_bit: 4
+quantization_method: bitsandbytes
+upcast_layernorm: true
+reward_model_type: api
+reward_model: http://127.0.0.1:9/unused
+
+### method
+stage: ppo
+do_train: true
+finetuning_type: lora
+lora_target: all
+ppo_buffer_size: 1
+ppo_epochs: 2
+ppo_target: 6.0
+
+### dataset
+dataset: rema_plantuml_mappo_tiny32
+dataset_dir: data
+template: llama3
+cutoff_len: 3072
+max_samples: 32
+overwrite_cache: true
+preprocessing_num_workers: 4
+
+### output
+output_dir: saves/llama3-8b/lora/rema_plantuml/mappo_v0_tiny32
+logging_steps: 1
+save_steps: 10
+plot_loss: true
+overwrite_output_dir: true
+report_to: none
+
+### train
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 1
+learning_rate: 5.0e-6
+max_steps: 20
+lr_scheduler_type: cosine
+warmup_ratio: 0.1
+bf16: true
+gradient_checkpointing: true
+ddp_timeout: 180000000
+
+### generate
+max_new_tokens: 512
+top_k: 0
+top_p: 0.9

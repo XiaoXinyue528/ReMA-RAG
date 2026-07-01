@@ -1,0 +1,16 @@
+{
+  "package": "rema_mappo_v0_tiny_20260615",
+  "rl_candidates": 298,
+  "tiers": {
+    "rema_plantuml_mappo_tiny32": 32,
+    "rema_plantuml_mappo_tiny64": 64,
+    "rema_plantuml_mappo_rl298": 298
+  },
+  "full_sft_tar_expected": "D:\\Temp\\rema_full_sft_v4_results_20260614_185318.tar.gz",
+  "full_sft_tar_exists_locally": true,
+  "notes": [
+    "MAPPO-v0 tiny patches LLaMA-Factory trainer_qr_s_g.py with a PlantUML PPO branch.",
+    "Default reward mode is relation_focus.",
+    "Default run is tiny32/max_steps=20."
+  ]
+}

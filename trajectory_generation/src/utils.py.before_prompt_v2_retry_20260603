@@ -1,0 +1,203 @@
+import ir_datasets
+import pandas as pd
+import torch
+import json
+import torch.nn.functional as F
+import argparse
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from langchain_core.prompts.chat import ChatPromptTemplate, HumanMessagePromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate
+from langchain_openai import ChatOpenAI
+from langchain_core.output_parsers import StrOutputParser
+from typing import NamedTuple
+from ir_datasets.util import DownloadConfig, home_path, Cache, ZipExtract, GzipExtract, LocalDownload
+from ir_datasets.formats import TsvDocs, TsvQueries, TrecQrels
+from typing import Annotated, Sequence, Literal, Optional, Union
+from typing_extensions import TypedDict, List
+from pydantic import BaseModel, Field
+import operator
+
+def load_dataset_ir(name, split):
+    nq_dataset = ir_datasets.load(f"{name}/{split}")
+    df = pd.DataFrame(nq_dataset.queries_iter())
+    nq_q_dict = {k: {"q": q, "a": a} for k, q, a in zip(df['query_id'].to_list(), df['text'].to_list(), df['answers'].to_list())}
+    corpus = nq_dataset.docs_store()
+    df_meta = pd.DataFrame(nq_dataset.qrels_iter())
+    return corpus, nq_q_dict, df_meta 
+
+def load_hf_model_causal_lm(dtype=torch.bfloat16, device_map="cuda:1"):
+    model_id = "hf/gemma-2-2b-it"
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    model = AutoModelForCausalLM.from_pretrained(model_id, device_map=device_map, torch_dtype=dtype)
+    return model, tokenizer
+
+class RetrieveTopChunk():
+    def __init__(self, tokenizer: any = None, embedding_model: any = None, retrieval_model: any = None, corpus: any = None, top_k=10):
+        self.tokenizer = tokenizer
+        self.embedding_model = embedding_model
+        self.retrieval_model = retrieval_model
+        self.corpus = corpus
+        self.top_k = top_k
+
+    def __call__(self, query: str):
+        batch_dict = self.tokenizer([query], max_length=8192, padding=True, truncation=True, return_tensors='pt')
+        batch_dict = {k: batch_dict[k].to(self.embedding_model.device) for k in batch_dict}
+        with torch.no_grad():
+            batch_dict["position_ids"] = (torch.cumsum(batch_dict["attention_mask"], dim=1) - 1).clamp(min=0)
+            outputs = self.embedding_model(**batch_dict)
+            dimension = 768
+            embeddings = outputs.last_hidden_state[:, 0, :dimension]
+            embeddings = F.normalize(embeddings, p=2, dim=1)
+        
+        embeddings = embeddings.cpu().numpy().astype('float32')
+        list_docs = []
+        list_doc_ids = []
+        
+        top_doc = self.retrieval_model.search([0], embeddings, top_k=self.top_k)
+        
+        for doc_id in top_doc[0]:
+            tmp = None
+            try:
+                for attempt_id in [str(doc_id), str(int(doc_id)+1), str(int(doc_id)-1)]:
+                    tmp = self.corpus.get(attempt_id)
+                    if tmp:
+                        break
+            except:
+                pass
+            
+            if tmp:
+                list_docs.append(tmp.text)
+                list_doc_ids.append(tmp.doc_id)
+        
+        if not list_docs:
+            list_docs = ["No relevant documents found in the current small index."]
+            list_doc_ids = ["none"]
+            
+        return list_docs, list_doc_ids
+
+class RetrieveTopChunkMedcpt(RetrieveTopChunk):
+    pass
+
+def load_jsonl(file_path):
+    data = []
+    with open(file_path, 'r') as f:
+        for line in f:
+            try:
+                json_object = json.loads(line)
+                data.append(json_object)
+            except json.JSONDecodeError:
+                print(f"Skipping invalid JSON: {line.strip()}")
+    return data
+
+def load_dataset(name):
+    """
+    专门适配真实的 PlantUCD 数据集
+    """
+    import json
+    data = []
+    # 直接指向我们刚才下载解压的真实数据路径
+    file_path = "/hy-tmp/my_code/my_code_backup/raw_data/PlantUCD-dataset-full-main/PlantUCD_dataset_test.jsonl"
+    
+    try:
+        with open(file_path, 'r', encoding="utf-8") as f:
+            for i, line in enumerate(f):
+                item = json.loads(line.strip())
+                # 映射为 main.py 认识的格式
+                data.append({
+                    "id": f"plantucd_test_{i}",       # 生成唯一题目ID
+                    "input": item.get("HumanLang", "") # 取出自然语言需求
+                })
+    except FileNotFoundError:
+        print(f"⚠️ 找不到测试数据集：{file_path}")
+        
+    return data
+
+class GenericDoc(NamedTuple):
+    doc_id: str
+    d: str
+    t: str
+    a: str
+    m: str
+    def default_text(self):
+        return self.a
+
+def load_corpus(name="dpr"):
+    if name == "dpr":
+        # ✅ 关键修改：将 dev 改为 train，与索引构建时使用的语料库一致
+        nq_dataset = ir_datasets.load("dpr-w100/natural-questions/train")
+        corpus = nq_dataset.docs_store()
+    else:
+        DL_DOCS = GzipExtract(LocalDownload("/scratch2/f0072r1/rs_rl/pubmed.tsv.gz"))
+        tmp = TsvDocs(DL_DOCS, doc_cls=GenericDoc, skip_first_line=True)
+        corpus = tmp.docs_store()
+    return corpus
+
+class QAAnswerFormat(BaseModel):
+    analysis: str = Field(description="Your thoughts, analysis about the question and the context. Think step-by-step")
+    answer: str = Field(description="The answer for the question")
+    success: Union[str, bool] = Field(description="String 'Yes' or 'No' (or boolean), indicate you can answer or not") 
+    rating: int = Field(default=None, description="How confident, from 0 to 10. More evidence, more agreement, more confident")
+
+class QAAnswerState(TypedDict):
+    analysis: str
+    answer: str
+    success: Union[str, bool]
+    rating: int
+
+class PlanFormat(BaseModel):
+    analysis: str = Field(description="Your analysis. Think step-by-step")
+    step: List[str] = Field(description="different steps to follow, should be in sorted order")
+
+class PlanState(TypedDict):
+    analysis: str
+    step: List[str]
+
+class StepTaskFormat(BaseModel):
+    type: str = Field(description="Type of task, one of [aggregate, question-answering]")
+    task: str = Field(description="The detail task to do in this step")
+
+class StepTaskState(TypedDict):
+    type: str
+    task: str
+
+class PlanSummaryFormat(BaseModel): 
+    output: str = Field(description="your output, follow the format")
+    answer: str = Field(description="Final answer for the question")
+    score: int = Field(description="Confident score")
+
+class PlanSummaryState(TypedDict):
+    output: str
+    answer: str
+    score: int
+
+class PlanExecState(TypedDict):
+    original_question: str
+    plan: List[str]
+    step_question: Annotated[List[StepTaskState], operator.add]
+    step_output: Annotated[List[QAAnswerState], operator.add]
+    step_docs_ids: Annotated[List[List[str]], operator.add]
+    step_notes: Annotated[List[List[str]], operator.add]
+    plan_summary: PlanSummaryState
+    stop: bool = False
+
+class RagState(TypedDict):
+    question: str
+    documents: List[str]
+    doc_ids: List[str]
+    notes: List[str]
+    final_raw_answer: QAAnswerFormat
+
+class GraphState(TypedDict):
+    original_question: str
+    plan: List[str]
+    past_exp: Annotated[List[PlanExecState], operator.add]
+    final_answer: str
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="sample argument parser")
+    parser.add_argument("--model", choices=['gpt4omini', 'llama3-70B', 'llama3-8B', 'llama3-70B-0', 'mix01', 'mix02', 'mix03'])
+    parser.add_argument("--dataset", choices=['nq', 'hotpotqa', 'triviaqa', "2wiki", "fever", "medmcqa", "simpleqa"])
+    parser.add_argument("--exp", choices=['plan_rag_extract', 'plan_rag', 'llmcot', 'rag_extract', 'llmonly'])
+    parser.add_argument("--start_index", type=int, default=0)
+    parser.add_argument("--end_index", type=int, default=1000000)
+    parser.add_argument('--gpus', nargs='+', type=int)
+    return parser.parse_args()
